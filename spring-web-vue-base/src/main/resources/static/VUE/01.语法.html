@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v-bind="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="Vue.js"></script>
+    <style>
+        .redText{
+            color: yellow;
+        }
+        .anni{
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+<!--    使用v-bind指定标签的某个属性在Vue对象中对应的属性名-->
+    <img v-bind:src="url" v-bind:class="anni">
+<!--    使用{{值}}指定该标签的文本内容对应的Vue对象中的属性-->
+    <h3 v-bind:class="color" >{{bookName}}</h3>
+    <p >{{price}}</p>
+<!--    使用v-on或@指定触发的方法-->
+    <button v-on:click="addCart(123)">加入购物车</button>
+    <button @click="buyNow">立即购买</button>
+</div>
+<script>
+    //vue的变量声明(区分大小写)
+    let vue = new Vue({
+        //el用来将vue对象与指定的标签进行绑定
+        el: "#app",
+        //data属性:用于指定数据,属性
+        data: {
+            bookName: 'name',
+            price: 35,
+            url:'https://ss1.bdstatic.com/70cFuXSh_Q1YnxGkpoWK1HF6hhy/it/u=2804650688,1862217889&fm=26&gp=0.jpg',
+            color:"redText",
+            anni:"anni",
+        },
+        //methods 用来指定方法
+        methods:{
+            addCart(id){
+                alert("addCart"+id)
+            },
+            buyNow(){
+              alert("buyNow")
+            },
+
+
+        }
+    });
+
+</script>
+
+
+</body>
+</html>

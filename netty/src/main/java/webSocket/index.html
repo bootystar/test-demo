@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocketTest</title>
+
+</head>
+<body>
+    <textarea id="inputArea" style="width: 300px ;height: 300px "></textarea>
+    <button type="button" onclick="send(es.getElementById('inputArea').value)">发送消息</button>
+    <textarea id="showArea" style="width: 300px ;height: 300px "></textarea>
+    <button type="button" onclick="es.getElementById('showArea').value=''">清空内容</button>
+
+    <!--该script组件不能写在head内，因head加载时页面元素还加载-->
+    <script>
+        //判断浏览器是否支持websocket
+        if (window.WebSocket){
+            //建立连接
+            socket=new WebSocket("ws://localhost:9000/test");
+
+            //获取显示框
+            let message=document.getElementById("showArea");
+
+            //连接开启
+            socket.onopen= function (){
+                message.value="连接已建立....";
+            }
+
+            //收到消息
+            socket.onmessage= function (res) {
+                message.value=message.value+"\n"+res.data;
+            }
+
+            //连接关闭
+            socket.onclose=function (){
+                message.value=message.value+"\n"+"连接已关闭";
+            }
+
+
+        }else{
+            alert("浏览器不支持websocket");
+        }
+
+
+        //发送消息
+        function send(message){
+            //先判断websocket是否创建好
+            if (!window.WebSocket){
+                alert("未创建websocket连接");
+                return;
+            }
+            if (socket.readyState==WebSocket.OPEN){
+                socket.send(message)
+            }else {
+                alert("连接未开启")
+            }
+
+        }
+
+    </script>
+</body>
+</html>

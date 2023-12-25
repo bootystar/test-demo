@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="mapper.GoodsMapper">
+
+    <select id="selectGoodsByPage" resultType="Goods">
+        select * from mall_goods  limit #{index},#{size}
+    </select>
+
+<!--    <select id="selectAllGoods" resultType="Goods">-->
+<!--        select * from mall_goods-->
+<!--    </select>-->
+
+    <select id="selectGoods" resultType="Goods">
+        select * from mall_goods
+        <where>
+            <if test="id!=0 and id!=null">
+                and id = #{id}
+            </if>
+            <if test="categoryid!=0 and id!=null">
+                and categoryid = #{categoryid}
+            </if>
+            <if test="name!=null and name!=''">
+                and name like #{name}
+            </if>
+        </where>
+    </select>
+
+
+    <select id="selectSingleGoods" resultType="Goods">
+        select * from mall_goods
+        <where>
+            <if test="id!=0 and id!=null">
+                and id = #{id}
+            </if>
+        </where>
+    </select>
+
+
+
+    <update id="updateGoods">
+        update mall_goods
+        <set>
+            <if test="stock!=null and stock!=0">
+                stock = #{stock}
+            </if>
+            <if test="salesprice!=null and salesprice!=0">
+            	salesprice = #{salesprice}
+            </if>
+        </set>
+        <where>
+            <if test="id!=0 and id!=null">
+                and id = #{id}
+            </if>
+        </where>
+    </update>
+
+
+</mapper>

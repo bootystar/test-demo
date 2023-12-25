@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       			   http://www.springframework.org/schema/beans/spring-beans.xsd
+       			   http://www.springframework.org/schema/context 
+       			   http://www.springframework.org/schema/context/spring-context.xsd
+       			   http://www.springframework.org/schema/aop 
+       			   http://www.springframework.org/schema/aop/spring-aop.xsd
+       			   http://www.springframework.org/schema/tx
+       			   http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+	<!--导入数据库配置文件 -->
+	<context:property-placeholder
+		location="db.properties" />
+
+	<!--配置数据源 -->
+	<bean id="dataSource"
+		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="${driver}"></property>
+		<property name="url" value="${url}"></property>
+		<property name="username" value="root"></property>
+		<property name="password" value="${password}"></property>
+	</bean>
+
+
+	<!--创建mybatis分页插件 -->
+	<bean id="pageInterceptor"
+		class="com.github.pagehelper.PageInterceptor"></bean>
+
+	<!--创建工厂 -->
+	<bean id="sqlSessionFactory"
+		class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!--加载数据源 -->
+		<property name="dataSource" ref="dataSource"></property>
+		<!--设置mybatis的配置文件路径,有些特殊配置需要在mybatis配置文件内单独配置 -->
+		<property name="configLocation" value="mybatis-config.xml"></property>
+		<!--对应实体类的,对应mybatis内的typeAliases -->
+		<property name="typeAliasesPackage" value="bean"></property>
+		<!--引入插件 -->
+		<property name="plugins" ref="pageInterceptor"></property>
+	</bean>
+
+
+	<!--使用mybatis的扫描类扫描指定包下的mapper文件 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="mapper"></property>
+	</bean>
+
+
+
+
+
+	<bean id="goodsLogService"
+		class="service.impl.GoodsLogServiceImpl">
+		<property name="goodsLogMapper" ref="goodsLogMapper"></property>
+	</bean>
+
+
+
+	<!--配置GoodsService内包含的mapper属性 此处的goodsMapper是通过上方扫描mapper文件创建得来 -->
+
+	<bean id="GoodsService" class="service.impl.GoodsServiceImpl">
+		<property name="goodsMapper" ref="goodsMapper"></property>
+		<property name="goodsLogService" ref="goodsLogService"></property>
+	</bean>
+
+	<!--配置切面 -->
+	<aop:config>
+		<aop:pointcut
+			expression="execution(* service.impl.*.*(..))" id="pc" />
+		<!--配置事务通知 -->
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="pc" />
+	</aop:config>
+
+	<!--配置事务通知 需要在该类里面指定事务管理器和作用的方法 -->
+	<tx:advice id="txAdvice"
+		transaction-manager="transactionManager">
+		<tx:attributes>
+			<!--spring为事务提供了不同的管理方式,每个方法的事务处理方式可以不同 -->
+			<!--name属性:通过方法名给指定的方法设置指定的事务处理方式 -->
+			<!--* 表示所有方法进行同一种事务处理 -->
+			<tx:method name="*" propagation="REQUIRED" />
+
+			<!--propagation 事务传播特性,在同一个业务中如果存在多个事务,事物之间应该怎么进行处理 -->
+			<!--REQUIRED 如果当前开启的事务已经在一个事务中(如service调用mapper,mappper已存在事务),则直接加入到事务中(2个事务合并为一个) -->
+			<!--REQUIRED_NEW 不管是否在事务中都直接创建新事务,独立执行 -->
+			<!--NEVER 永远不在已开启事务中执行,执行就报错 -->
+			<!--...... -->
+
+			<!--isolation:事务隔离级别 -->
+			<!--DEFAULT 默认 -->
+			<!--READ UNCOMMITED -->
+			<!--READ COMMITED -->
+			<!--REPEATABLE READ -->
+			<!-- SERIALIZABLE -->
+		</tx:attributes>
+	</tx:advice>
+
+	<!--配置事务管理器类,负责管理事务 -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+
+
+
+
+
+</beans>      			   

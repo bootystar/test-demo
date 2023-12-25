@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       			   http://www.springframework.org/schema/beans/spring-beans.xsd
+       			   http://www.springframework.org/schema/context 
+       			   http://www.springframework.org/schema/context/spring-context.xsd
+       			   http://www.springframework.org/schema/aop 
+       			   http://www.springframework.org/schema/aop/spring-aop.xsd">
+	<!--aop相关配置 -->
+	<!--配置通知对象(方法执行前增强功能的对象和执行后增强功能的对象) -->
+	<bean id="beforeAdvice" class="com.advice.BankServiceBeforeAdvice"></bean>
+	<bean id="afterAdvice" class="com.advice.BankServiceAfterAdvice"></bean>
+
+	<!--配置切点 -->
+	<aop:config>
+		<!--指定配置需要切点的方法 -->
+		<!--开始的*代表方法的修饰符,可用*代替 -->
+		<!--开始的*后面空格后加需要插入切点的方法全名(包含包路径) -->
+		<!--后面的*为通配符,括号内为形参列表,()代表无参方法, (..)代表所有方法 -->
+		<aop:pointcut expression="execution(* com.service.*.*(..))" id="cp" />
+
+		<!--指定切点的通知类 -->
+		<!--advice-ref指定切点调用的通知类, point-ref指定生效的切点 -->
+		<aop:advisor advice-ref="beforeAdvice" pointcut-ref="cp" />
+		<aop:advisor advice-ref="afterAdvice" pointcut-ref="cp" />
+	</aop:config>
+
+
+	<!--配置对象 -->
+	<!--若该对象满足切点指定的路径,该类的方法将会触发切点 -->
+	<bean id="bankService" class="com.service.BankServiceImpl"></bean>
+
+
+</beans>      			   

@@ -1,0 +1,19 @@
+#box{
+    width: 500px;
+    background: pink;
+    text-align: center;
+}
+.infoBox{
+    text-align:left;
+    position: relative;
+    left: 62px;
+}
+#message{
+    width: 322px;
+}
+#send{
+    position:relative;
+    left:50px;
+    height:30px;
+    width: 326px;
+}

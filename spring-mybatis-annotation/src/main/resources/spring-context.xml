@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       			   http://www.springframework.org/schema/beans/spring-beans.xsd
+       			   http://www.springframework.org/schema/context
+       			   http://www.springframework.org/schema/context/spring-context.xsd
+       			   http://www.springframework.org/schema/aop
+       			   http://www.springframework.org/schema/aop/spring-aop.xsd
+       			   http://www.springframework.org/schema/tx
+       			   http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!--导入数据库配置文件 -->
+    <context:property-placeholder location="db.properties"/>
+
+
+    <!--配置数据源 -->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="${driver}"></property>
+        <property name="url" value="${url}"></property>
+        <property name="username" value="root"></property>
+        <property name="password" value="${password}"></property>
+    </bean>
+
+
+    <!--创建mybatis分页插件 -->
+    <bean id="pageInterceptor"
+          class="com.github.pagehelper.PageInterceptor"></bean>
+
+    <!--创建工厂 -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--加载数据源 -->
+        <property name="dataSource" ref="dataSource"></property>
+        <!--设置mybatis的配置文件路径,有些特殊配置需要在mybatis配置文件内单独配置 -->
+        <property name="configLocation" value="mybatis-config.xml"></property>
+        <!--对应实体类的,对应mybatis内的typeAliases -->
+        <property name="typeAliasesPackage" value="bean"></property>
+        <!--引入插件 -->
+        <property name="plugins" ref="pageInterceptor"></property>
+    </bean>
+
+
+    <!--使用mybatis的扫描类扫描指定包下的mapper文件 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="mapper"></property>
+    </bean>
+
+
+    <!--配置事务管理器类,负责管理事务 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+
+    <!-- 开启事务注解扫描 -->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+
+    <!--开启注解扫描 -->
+    <context:component-scan base-package="service"></context:component-scan>
+
+
+</beans>

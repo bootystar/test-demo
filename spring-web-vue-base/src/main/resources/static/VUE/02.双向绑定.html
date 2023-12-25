@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="Vue.js"></script>
+</head>
+<body>
+<div id="app">
+    <!--    使用v-model标签绑定该某属性或某内容的值对应的 Vue对象的属性-->
+    <input type="text" placeholder="account" v-model="account">
+    <input type="text" placeholder="password" v-model="password">
+    <button @click="login()">login</button>
+    <p>{{account}}</p>
+</div>
+
+<script>
+    new Vue({
+        el: "#app",
+        data: {
+            account: "",
+            password: "",
+        },
+        methods: {
+            login() {
+                //获得账号密码
+                console.log(this.account);
+                console.log(this.password);
+            }
+        },
+    })
+
+</script>
+
+</body>
+</html>

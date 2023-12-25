@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+    <link rel="stylesheet" href="../layui/css/layui.css">
+
+    <script type="text/javascript" src="../js/jquery-1.8.3.min.js"></script>
+    <script type="text/javascript" src="../js/util.js"></script>
+    <script src="../layui/layui.js"></script>
+    <script type="text/javascript" src="../webUploader/webuploader.js"></script>
+
+    <style type="text/css">
+
+       body{
+           padding: 40px;
+       }
+
+       /*webuploader按钮底色颜色*/
+       .webuploader-element-invisible {
+           position: absolute !important;
+           clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
+           clip: rect(1px,1px,1px,1px);
+       }
+
+    </style>
+
+</head>
+<body>
+
+    <div>
+        <button type="button" id="filePicker" class="layui-btn layui-btn-sm">选择文件</button>
+
+        <button id="uploads" type="button" class="layui-btn layui-btn-normal layui-btn-sm">批量上传</button>
+        <button id="stops" type="button" class="layui-btn layui-btn-normal layui-btn-sm">批量暂停</button>
+        <button id="cancels" type="button" class="layui-btn layui-btn-normal layui-btn-sm">批量取消</button>
+
+        <form class="layui-form" lay-filter="uploadFormFilter">
+
+            <table class="layui-table" lay-skin="line" >
+                <colgroup>
+                    <col width="20">
+                    <col width="80">
+                    <col width="200">
+                    <col width="100">
+                    <col width="300">
+                    <col width="120">
+                    <col width="120">
+                    <col>
+                </colgroup>
+                <thead>
+                <tr>
+                    <th>
+                        <input id="checkBoxAllId" type="checkbox" lay-skin="primary" value="checkBoxAllValue">
+                    </th>
+                    <th>缩略图</th>
+                    <th>文件名称</th>
+                    <th>文件大小</th>
+                    <th>上传进度</th>
+                    <th>上传速度</th>
+                    <th>上传状态</th>
+                    <th>操作</th>
+                </tr>
+                </thead>
+                <tbody id="fileLists" >
+
+                </tbody>
+            </table>
+
+        </form>
+
+    </div>
+
+</body>
+
+<script type="text/javascript">
+    
+    // 使用layui的element和form模块【用于进度条和复选框】
+    var element,form;
+    layui.use(['element','form'], function(){
+        element = layui.element,form = layui.form;
+
+        // 全选
+        form.on('checkbox()', function(data){
+
+            var checkBoxAll = $("#fileLists input[type='checkbox']");
+
+            // 点击全选按钮
+            if("checkBoxAllValue" == data.value)
+            {
+                checkBoxAll.prop("checked",data.elem.checked);
+                form.render('checkbox');
+                return false;
+            }
+
+            // 点击非全选按钮
+            var on = 0;
+            var off = 0;
+            checkBoxAll.each(function () {
+                if($(this).val() != 'checkBoxAllValue')
+                {
+                    if($(this).prop('checked')) on++;// 选中
+                    else off++;// 未选中
+                }
+            });
+
+            // 设置自动勾选全选和取消勾选全选
+            if(on == checkBoxAll.length) $("#checkBoxAllId").prop("checked",true);
+            else if(off > 0 ) $("#checkBoxAllId").prop("checked",false);
+
+            form.render('checkbox');
+
+            return false;
+
+        });
+
+    });
+
+    // 初始化分片数据
+    var chunkSize = 5*1024*1024;// 文件分片大小，单位K，这里是5M(其实默认也是5M)
+    var fileFailStatusMap = new Map();// 用于记录上传失败的状态，如果是秒传则视为成功，用于秒传验证
+    var fileMD5Map = new Map();// 文件的MD5值，用于验证分块和文件合并
+    var uploadTimeMap = new Map();// 分片上传的时间节点，用于计算上传速度
+    var fileNameArray = [];// 添加到列表的文件名称，用于防止在暂停情况下重复添加相同文件
+    var fileUploadChunkIndexArray = new Map();// 已上传分片的下标(chunk)，用于分片上传前验证
+    var fileMD5Array = [];// 添加到列表的文件MD5，用于防止文件名称不一致，但是文件MD5相同的情况下重复添加相同文件【其实fileNameArray和fileMD5Array可以使用一个map来解决】
+    var uploadStatusMap = {"wait":"等待上传...","uploadBefore":"上传准备中...","uploadIng":"上传中...","stop":"已暂停","uploadSuccess":"上传完成","uploadFail":"上传失败","marginIng":"文件合并中..."};
+
+    // 注册分片上传命令:key为命令名称，value为命令对应的执行函数名称【命令的注册必须在webuploader实例化之前】
+    WebUploader.Uploader.register({
+        "before-send-file" : "beforeSendFile",// 被分片的文件上传前执行的命令
+        "before-send" : "beforeSend",// 单个分片上传前执行的命令（如果有多个分片，这个命令会执行多次）
+        "after-send-file" : "afterSendFile"// 所有分片上传完成后执行的命令
+    },{
+
+        // 文件上传前执行【每个文件该函数只执行一次】
+        beforeSendFile:function (file) {
+
+            // 因为分片注册是采用链式操作的方式，所以这里要使用js提供的deferred【具体操作查看deferred指南】
+            var deferred = $.Deferred();
+
+            // 获取文件id，队列中的文件id唯一【方便引用而已】
+            var fileId = file.id;
+
+//            // 赋值文件名称，id为key，value为名称。用于同时上传多个文件的时候区分文件对应的名称，防止覆盖
+//            fileNameMap.set(fileId,file.name);
+
+            // 获取待上传文件的MD5值【因为在注册命令的时候还没有实例化webuploader，所以这里要新建一个webuploader的实例】
+            // 这个MD5值跟文件名没有关系，只要文件内容一样，md5值就一样
+            // md5file("待分片的文件","开始索引","每个分片的大小(必须和webuploader中的chunkSize一致)")
+            // md5file函数如果只传file参数，md5计算速度会比较慢；
+            (new WebUploader.Uploader()).md5File(file,0,chunkSize)
+                .then(function (val) {
+
+                    // 赋值文件MD5值，id为key，value为MD5值。用于同时上传多个文件的时候区分文件对应的MD5，防止覆盖
+                    fileMD5Map.set(fileId,val);
+
+                    // 在这里可以实现秒传功能【通过md5验证该文件是否已经上传到了服务器，如果上传了，直接进度条设置100%、提示上传成功、设置按钮文本、设置按钮启用禁用、结束上传链式操作即可】
+                    var resultData = ajaxUtilJson({fileMD5:val,chunkSize:chunkSize,fileExt:file.ext},"/maxFileUpload/verifyFileExists");
+                    console.log(file.name+"上传前验证秒传:"+JSON.stringify(resultData));
+                    if(resultData.exists)
+                    {
+                        // 设置进度条为100%
+                        element.progress('progressBar'+fileId, '100%');
+
+                        // 设置文件上传状态【上传成功】
+                        $("#uploadStatus"+fileId).html(uploadStatusMap.uploadSuccess);
+
+                        // 设置上传按钮文字为继续上传
+                        $("#upload"+fileId).html("继续上传");
+
+                        // 控制按钮启用禁用
+                        buttonControl("upload",fileId, false);
+                        buttonControl("stop",fileId, false);
+                        buttonControl("cancel",fileId, false);
+
+                        // 设置失败原因为秒传成功，用于上传失败排除执行失败操作
+                        fileFailStatusMap.set(fileId,"SUCCESS");
+
+                        deferred.reject();// 因为本函数是文件上传前执行，且该函数只执行一次，所以这个设置会直接结束整个上传流程，进入上传失败的事件监听
+
+                    }
+
+                    else
+                    {
+                        // 获取已上传分片下标（用于分片上传验证分片是否已经上传：方式2）【这个接口和验证文件秒传接口拆分，为了逻辑不耦合】
+                        var resultData = ajaxUtilJson({fileMD5:val,chunkSize:chunkSize},"/maxFileUpload/getChunkUploadIndex");
+                        fileUploadChunkIndexArray.set(fileId,resultData.chunkIndex);
+
+                    }
+
+                    deferred.resolve();// 设置当前操作已完成，可以进入下一步操作【beforeSend】
+                });
+
+            return deferred.promise();// 在下一步操作之前不允许更改deferred的状态
+        },
+
+        // 分片上传前执行【如果文件被划分为多个分片，这里就执行多次】
+        beforeSend:function (block) {
+
+            var deferred = WebUploader.Deferred();
+
+            // 从分片对象中获取文件id，队列中的文件id唯一【方便引用而已】
+            var fileId = block.file.id;
+
+            // 分片下标，可以理解为当前文件的分片索引，用于标识该分片（用于后台生成分片文件的文件名），作用范围是当前文件【从0开始】
+            var chunk = block.chunk;
+
+            // 验证该分片是否已经上传
+            // 【这里有两种方式，两种方式都有一个共同的缺点，如果后台的分片文件在合并完成之前，由于特殊原因导致分片文件内容变更，则合并后文件会损坏；
+            // 如果要防止这种情况出现，那么需要实时验证前端分片文件和后台分片文件的MD5值是否一致】
+
+            // 验证方式1(后台实时验证)【不推荐】：
+            // 【优点:可靠性高；缺点：太费时间（如果一个上G的文件在上传到90%后取消，按照默认5M一个分片，下次要验证差不多200次，也就意味着要发200次请求到后台）】
+            // 1.通过相同的自定义路径下查找md5这个文件夹下的分片文件，如果没有，证明该文件的分片没有上传过；
+            // 2.如果分片文件夹存在，则计算{chunk}.part文件大小和chunkSize是否一致，如果不一致，证明该分块上传缺失，删掉该分块，返回前端没有上传过，重新上传；
+//            var resultData = ajaxUtilJson({fileMD5:fileMD5Map.get(fileId),chunk:chunk,chunkSize:chunkSize},"/maxFileUpload/verifyChunk");
+//
+//            console.log("chunk:"+JSON.stringify(resultData));
+//
+//            // 该分片已经存在，结束该分片的上传
+//            if(resultData.success)
+//            {
+//                deferred.reject();// 设置当前操作已失败，结束本次链式操作【这里会进入下一个分片上传流程】
+//                return deferred.promise();
+//            }
+//
+//            // 该分片不存在，继续上传
+//            else
+//            {
+//
+//                // 计算文件上传速度【只有需要上传分片的情况下才计算上传速度，避免续传情况下进度条不变，上传速度一直在变】
+//                uploadSpeed(fileId);
+//
+//                // 设置文件状态【上传中，避免续传情况下进度条不变上传速度不变而状态是上传中（也就是检测分片是否上传过程应该是上传准备中状态）】
+//                $("#uploadStatus"+fileId).html(uploadStatusMap.uploadIng);
+//
+//                // 通过formData传递参数到后台【这里设置的是分片在上传的时候传递的参数，对应的是webuploader实例中的上传接口】
+//                this.owner.options.formData.fileMD5 = fileMD5Map.get(fileId);// MD5值
+//                this.owner.options.formData.chunk = chunk;// 分块下标
+//                this.owner.options.formData.chunkSize = chunkSize;// 分片大小
+//
+//                deferred.resolve();// 设置当前操作已完成，可以进入下一步操作【上传分块】
+//                return deferred.promise();
+//            }
+
+            // 验证方式2(通过已上传的分片下标验证)【在beforeSendFile中调用，避免每次验证还要进行数据交互】:
+            // 【优点:可靠性高，验证速度快(只需要和后台交互一次即可)；缺点：通用缺点】
+            // 1.通过相同的自定义路径下查找md5这个文件夹下的分片文件，如果没有返回-1，证明该文件的分片没有上传过；
+            // 2.如果分片文件夹存在，则返回所有分片文件的下标，前台匹配该下标如果存在则不上传，否则重新上传该分片
+//            var resultData = ajaxUtilJson({fileMD5:fileMD5Map.get(fileId),chunk:chunk,chunkSize:chunkSize},"/maxFileUpload/getChunkUploadIndex");
+
+            // 获取已上传的分片下标
+            var chunkIndexArray = fileUploadChunkIndexArray.get(fileId);
+            console.log("chunkIndexArray:"+chunkIndexArray);
+
+            // 该分片已经存在，结束该分片的上传
+            if(chunkIndexArray.indexOf(chunk) > -1)
+            {
+                deferred.reject();// 设置当前操作已失败，结束本次链式操作【这里会进入下一个分片上传流程】
+                return deferred.promise();
+            }
+
+            // 该分片不存在，继续上传
+            else
+            {
+
+                // 计算文件上传速度【只有需要上传分片的情况下才计算上传速度，避免续传情况下进度条不变，上传速度一直在变】
+                uploadSpeed(fileId);
+
+                // 设置文件状态【上传中，避免续传情况下进度条不变上传速度不变而状态是上传中（也就是检测分片是否上传过程应该是上传准备中状态）】
+                $("#uploadStatus"+fileId).html(uploadStatusMap.uploadIng);
+
+                // 通过formData传递参数到后台【这里设置的是分片在上传的时候传递的参数，对应的是webuploader实例中的上传接口】
+                this.owner.options.formData.fileMD5 = fileMD5Map.get(fileId);// MD5值
+                this.owner.options.formData.chunk = chunk;// 分块下标
+                this.owner.options.formData.chunkSize = chunkSize;// 分片大小
+
+                deferred.resolve();// 设置当前操作已完成，可以进入下一步操作【上传分块】
+                return deferred.promise();
+            }
+
+        },
+
+        // 所有分片上传完成后执行【每个文件只执行一次】
+        afterSendFile:function (file) {
+
+            console.log(file.name+"发送合并请求");
+
+            // 通知后台合并分片
+            var resultData = ajaxUtilJson({fileMD5:fileMD5Map.get(file.id),fileExt:file.ext,chunkCount:Math.floor(file.size / chunkSize + (file.size % chunkSize > 1 ? 1 : 0))},"/maxFileUpload/marginFile");
+            console.log(file.name+"合并完成，合并结果:"+JSON.stringify(resultData));
+
+            var deferred = WebUploader.Deferred();
+
+            if(!resultData.success){
+                alert("文件信息缺失,请点击\"继续上传\"按钮,上传缺失信息!");
+                deferred.reject();
+            }
+
+            deferred.resolve();
+
+            return deferred.promise();
+
+        }
+    });
+
+    // 构建webuploader实例
+    var uploader = WebUploader.create({
+
+        // 用于在html5不支持的情况启用flash模式
+        swf:"../webUploader/swf/Uploader.swf",
+
+        // 文件/分片上传接口
+        server:"/maxFileUpload/upload",
+
+        // 上传文件的容器id
+        pick:"#filePicker",
+
+        // 在上传文件的时候，将队列中的下一个待上传的文件准备好
+        prepareNextFile:true,
+
+        // 去重【根据文件名称， 文件大小，文件最后更新时间生成hash值】
+        duplicate:true,
+
+        // 不压缩图片【默认情况下如果是jpeg，文件上传前会压缩一把再上传】
+        resize:false,
+
+        // 是否开启分片上传【如果开启，那么每个分片上传都会调用该实例的文件上传接口】
+        chunked:true,
+
+        // 分片大小
+        chunkSize:chunkSize,
+
+        // 如果网络中断重试次数
+        chunkRetry:1,
+
+        // 允许同时最大上传进程数量（最多同时上传几个分片）
+        threads:4
+
+    });
+
+    // 当有文件被添加进队列的时候执行【有文件被选择的时候执行】
+    // 可以用来将选择的文件信息添加到文件选择列表并绑定文件上传操作
+    // 限制了相同文件名或者相同文件MD5值的文件不能重复添加【相同MD5值的文件，一般是同一个文件改了名字，因为文件MD5值的计算和文件名称没有关系】
+    // 如果相同MD5值的文件分批上传，那么在存储路径相同的情况下，后面的文件会覆盖前面的文件
+    uploader.on( 'fileQueued', function(file) {
+
+        // 获取文件选择列表
+        var $fileLists = $("#fileLists");
+
+        // 获取文件id，队列中的文件id唯一【方便引用而已】
+        var fileId = file.id;
+
+        // 获取当前文件名的已有下标
+        var fileNameIndex = fileNameArray.indexOf(file.name);
+
+        // 验证该文件是否已经在列表当中【解决文件上传点击暂停后状态为已取消的情况下，还能继续选择相同的文件】
+        if(fileNameIndex >= 0)
+        {
+            uploader.removeFile(fileId,true);// 从当前上传队列中删除指定文件【因为执行fileQueued该文件就已经在队列当中了，所以这里要从队列中删除】
+            return;
+        }
+
+        // 追加列表文件信息【file.id:webuploader自动生成的文件id(按照选择顺序生成的)】
+        $fileLists.append("" +
+            "<tr id='"+fileId+"'>" +
+            "   <td><input id='checkbox"+fileId+"' type='checkbox' lay-skin='primary' value='"+fileId+"'></td>" +
+            "   <td id='image"+fileId+"'></td>" +
+            "   <td id='fileName"+file.id+"'>"+file.name+"</td>" +
+            "   <td hidden id='fileMD5"+file.id+"'></td>" +
+            "   <td>"+WebUploader.formatSize( file.size, 0, ['B', 'KB', 'MB', 'GB'] )+"</td>" +
+            "   <td>" +
+            "           <div class='layui-progress layui-progress-big' lay-filter='progressBar"+fileId+"' lay-showPercent='true'>" +
+            "               <div id='progressBarDiv"+fileId+"' class='layui-progress-bar ' lay-percent='0%'></div>" +
+            "           </div>" +
+            "   </td>" +
+            "   <td id='speed"+fileId+"'>0KB/S</td>" +
+            "   <td id='uploadStatus"+fileId+"'>等待上传...</td>" +
+            "   <td>" +
+            "       <button type='button' class='layui-btn layui-btn-xs layui-btn-normal' id='upload"+fileId+"'>上传</button>" +
+            "       <button disabled=true type='button' class='layui-btn layui-btn-xs layui-btn-normal layui-btn-disabled' id='stop"+fileId+"'>暂停</button>" +
+            "       <button type='button' class='layui-btn layui-btn-normal layui-btn-xs' id='cancel"+fileId+"' >取消</button>" +
+            "   </td>" +
+            "</tr>");
+
+        // 控制复选框勾选状态【如果选择文件前，全选框是选中状态，那么添加列表数据时，默认勾选对应文件】
+        if($("#checkBoxAllId").prop("checked"))
+            $("#checkbox"+fileId).prop("checked",true);
+        else
+            $("#checkbox"+fileId).prop("checked",false);
+
+        // 刷新表单组件form【否则复选框不会显示】
+        form.render(null,'uploadFormFilter');
+
+        // 生成缩略图makeThumb，ret为缩略图的base字符串，如果生成缩略图失败则error为true
+        uploader.makeThumb( file, function( error, ret ) {
+            // 如果上传的文件不是图片，那么error为true，所以这里设置默认图片
+            if ( error )
+                $("#image"+file.id).html("<img width='30px' src='../images/defaultFile.png'>");
+            else
+                $("#image"+file.id).html("<img width='30px' src='"+ret+"'>");
+        });
+
+        // 设置进度条初始值【用于设置取消，关闭窗口等重新选择已经上传过的文件的初始值】
+        uploader.md5File(file,0,chunkSize)
+            .then(function (val) {
+
+                // 获取文件MD5的已有下标
+                var fileMD5Index = fileMD5Array.indexOf(val);
+
+                // 验证该MD5文件是否已经存在
+                if(fileMD5Index >= 0){
+                    uploader.removeFile(fileId,true);
+                    $("#"+fileId).remove();
+                    return;
+                }
+
+                // 将MD5值保存，用于防止相同MD5但文件名称不一样的情况下重复添加
+                fileMD5Array.push(val);
+
+                // 设置文件MD5值到文件展示列表【用于取消情况下删除MD5数值内容】
+                $("#fileMD5"+fileId).html(val);
+
+                // 调用后台获取已上传的分片数量【验证上传或者分片接口】
+                var resultData = ajaxUtilJson({fileMD5:val,chunkSize:chunkSize,fileExt:file.ext},"/maxFileUpload/getChunkUploadCount");
+                console.log(file.name+"加入队列，验证已上传进度（已上传的分片数量）:"+JSON.stringify(resultData));
+
+                // 验证是否上传过分片，如果上传过，计算上传进度【文件大小除以分片大小，得出总分片数量。再用实际上传的分片数量除以总分片数量】
+                var chunkCount = resultData.chunkCount;// 获取已上传的分片数量
+                if(chunkCount > 0){
+                    var progress = ((chunkCount / Math.floor(file.size / chunkSize + (file.size % chunkSize > 1 ? 1 : 0))) * 100).toFixed(0);// 上传进度
+                    if(progress >= 99)// 防止分片全部上传完成，合并失败的情况下，下次选择该文件，进度直接就是100%，导致不能继续上传
+                        element.progress('progressBar'+file.id, 99 +'%');
+                    else
+                        element.progress('progressBar'+file.id, progress <= 0 ? 0 + "%" : progress +'%');
+                }
+
+            });
+
+        // 刷新进度条组件element【否则进度条和进度条文本不会显示】
+        element.render(null,'progressBar'+file.id);
+
+        // 初始化上传状态【等待上传】
+        $("#uploadStatus"+fileId).html(uploadStatusMap.wait);
+
+        // 上传当前文件
+        $fileLists.on('click','#upload'+file.id,function(){
+
+            // 调用文件上传
+            upload(file.id);
+
+        });
+
+        // 暂停当前文件的上传
+        $fileLists.on('click','#stop'+file.id,function(){
+
+            // 暂停文件
+            stop(file.id);
+
+        });
+
+        // 取消当前文件的上传
+        $fileLists.on('click','#cancel'+file.id,function(){
+
+            // 调用取消文件上传
+            cancel(file.id);
+
+        });
+
+        // 将该文件的信息保存，用于解决列表文件重复添加
+        fileNameArray.push(file.name);
+
+    });
+
+    // 文件上传过程中实时执行
+    // 可以用来创建实时的进度条【percentage:实时百分比】
+    uploader.on( 'uploadProgress', function( file, percentage ) {
+
+        // 获取进度条已有进度和最新生成的进度
+        var percentageOld = parseInt($("#progressBarDiv"+file.id).find("span").html().replaceAll("%",""));
+        var percentageNew =  (percentage * 100).toFixed(0);
+
+        // 使用layui的进度条UI
+        // 验证小于100才设置进度条，如果等于100则在上传成功中设置【避免进度条文字已经是100%，而进度条还没有100%】
+        // 验证当前进度要大于断点续传之前的进度，避免开始断点续传的时候进度条进度变小
+        if(percentageNew < 100 && percentageNew > percentageOld)
+            element.progress('progressBar'+file.id, percentageNew +'%');
+
+        // 设置文件状态【文件合并中】
+        // 正常来讲这个状态应该在所有分片上传完成后的函数afterSendFile中执行，但是测试发现不生效，暂时放这里
+        if(percentageNew >= 99)
+        {
+            $("#uploadStatus"+file.id).html(uploadStatusMap.marginIng);
+            // 禁用暂停和取消
+            buttonControl("stop",file.id,false);
+            buttonControl("cancel",file.id,false);
+        }
+
+    });
+
+    // 上传成功执行【其实是指webuploader的链式操作全部成功后执行】
+    // 如果是分片上传，那么只有在所有分片全部上传成功后才执行
+    uploader.on( 'uploadSuccess', function( file, response ) {
+
+        var fileId = file.id;
+
+        // 设置进度条为100%
+        element.progress('progressBar'+fileId, '100%');
+
+        console.log(file.name+":上传成功"+JSON.stringify(response));
+
+        // 按钮启用禁用控制
+        buttonControl("upload",fileId, false);
+        buttonControl("stop",fileId, false);
+        buttonControl("cancel",fileId, false);
+
+        // 设置上传速度
+        $("#speed"+fileId).html("0KB/S");
+
+        form.render(null,'uploadFormFilter');
+
+        // 设置文件上传状态【上传成功】
+        $("#uploadStatus"+fileId).html(uploadStatusMap.uploadSuccess);
+
+    });
+
+    // 上传失败执行
+    // 如果是分片上传，那么只要有一个分片上传失败就会执行【某个分片上传失败代表整个文件上传失败】
+    uploader.on( 'uploadError', function( file ) {
+
+        // 获取文件标识，方便引用而已
+        var fileId = file.id;
+
+        // 验证是秒传成功还是上传失败，如果是秒传成功，结束失败操作
+        if(fileFailStatusMap.get(fileId) == "SUCCESS")
+            return ;
+
+        console.log(file.name+":上传失败");
+
+        // 设置上传状态【上传失败】
+        $("#uploadStatus"+fileId).html(uploadStatusMap.uploadFail);
+
+        // 设置上传速度
+        $("#speed"+fileId).html("0KB/S");
+
+        // 按钮启用禁用控制
+        buttonControl("upload",fileId, true);
+        buttonControl("stop",fileId, false);
+        buttonControl("cancel",fileId, true);
+
+        // 设置进度条颜色为黄色
+        $("#progressBarDiv"+fileId).attr("class","layui-progress-bar layui-bg-orange");
+
+    });
+
+    // 上传完成执行，不管上传结果如何，只要上传工作结束就会执行
+    uploader.on( 'uploadComplete', function( file) {
+
+        console.log(file.name+":上传完成");
+
+        // 将文件分片索引从数组中删除
+        fileUploadChunkIndexArray.splice(fileUploadChunkIndexArray.indexOf(file.id),1);
+
+    });
+
+    // 批量上传
+    $("#uploads").click(function () {
+
+        // 计数器，用于记录选中的数量
+        var checkCount = 0;
+
+        // 获取所有选中的文件id
+        $("#fileLists input[type='checkbox']").each(function(){
+
+            if($(this).prop('checked'))// 选中
+            {
+                var fileId = $(this).val();// file.id
+
+                upload(fileId);
+
+                checkCount++;
+
+            }
+
+        });
+
+        // 提示必须要选择上传的文件
+        if(checkCount <= 0){
+            alert("请选择要上传的文件!");
+        }
+
+    });
+
+    // 批量暂停
+    $("#stops").click(function () {
+
+        // 计数器，用于记录选中的数量
+        var checkCount = 0;
+
+        // 获取所有选中的文件id
+        $("#fileLists input[type='checkbox']").each(function(){
+
+            if($(this).prop('checked'))// 选中
+            {
+                var fileId = $(this).val();// file.id
+
+                stop(fileId);
+
+                checkCount++;
+
+            }
+
+        });
+
+        // 提示必须要选择上传的文件
+        if(checkCount <= 0){
+            alert("请选择要暂停上传的文件!");
+        }
+
+    });
+
+    // 批量取消
+    $("#cancels").click(function () {
+
+        // 计数器，用于记录选中的数量
+        var checkCount = 0;
+
+        // 获取所有选中的文件id
+        $("#fileLists input[type='checkbox']").each(function(){
+
+            if($(this).prop('checked'))// 选中
+            {
+                var fileId = $(this).val();// file.id
+
+                cancel(fileId);
+
+                checkCount++;
+
+            }
+
+        });
+
+        // 提示必须要选择上传的文件
+        if(checkCount <= 0){
+            alert("请选择要暂停上传的文件!");
+        }
+
+    });
+
+    // 上传文件
+    function upload(fileId){
+
+        // 未上传完成的才执行
+        var progressBar = parseInt($("#progressBarDiv"+fileId).find("span").html().replaceAll("%",""));
+        if(progressBar > 99)
+            return;
+
+        // 开始上传当前文件，如果上传队列中有其他文件正在上传，那么该文件就会添加到上传队列最后，按照顺序进行上传
+        uploader.upload(fileId);
+        // 开始上传所有队列中的文件，每次只会执行一个文件的上传，当前文件上传完后自动执行队列中的下一个文件
+        // uploader.upload();
+
+        // 设置上传按钮文字为继续上传
+        $("#upload"+fileId).html("继续上传");
+
+        // 设置文件上传状态【上传准备中】
+        $("#uploadStatus"+fileId).html(uploadStatusMap.uploadBefore);
+
+        // 设置进度条颜色为绿色
+        $("#progressBarDiv"+fileId).attr("class","layui-progress-bar ");
+
+        // 获取进度条进度【这里span是layui的样式内置结构】
+        var progressBar = parseInt($("#progressBarDiv"+fileId).find("span").html().replaceAll("%",""));
+
+        // 验证进度条是否达到100%，控制按钮启用禁用【排除批量上传的已上传完成的文件】
+        if(progressBar < 100){
+            buttonControl("upload",fileId, false);
+            buttonControl("stop",fileId, true);
+            buttonControl("cancel",fileId, true);
+        }
+
+        // 设置文件（分片）上传的时间节点【不管是首次上传，还是暂停后上传都要设置，所以在这里执行】
+        var myDate = new Date();
+        uploadTimeMap.set(fileId,myDate.getTime());//设置当前分片开始上传的时间节点
+
+    }
+
+    // 暂停文件上传
+    function stop(fileId){
+
+        // 未上传完成的才执行
+        var progressBar = parseInt($("#progressBarDiv"+fileId).find("span").html().replaceAll("%",""));
+        if(progressBar >= 99)
+            return;
+
+        // 将当前文件标记为已取消上传，可以继续上传【可以配合upload(file)实现单个文件的暂停开始】
+        // 由于文件上传状态是已取消，所以暂停后可以继续选择相同文件加入到文件上传队列
+        // cancelFile(file)和removeFile(file)测试结果都一样，并没有发现什么区别。为避免函数混淆，建议使用cancelFile，removeFile用于将文件移除队列
+        uploader.cancelFile(fileId);
+//      uploader.removeFile(file);
+        // stop(true)暂停所有上传队列中的文件；如果是stop(file)则是暂停指定的文件，但是好像有问题，暂停后该文件不能继续上传
+//      uploader.stop(true);
+
+        // 设置文件上传状态【已暂停】
+        $("#uploadStatus"+fileId).html(uploadStatusMap.stop);
+
+        // 获取进度条进度
+        var progressBar = parseInt($("#progressBarDiv"+fileId).find("span").html().replaceAll("%",""));
+
+        // 验证进度条是否达到100%，控制按钮启用禁用【排除批量上传的已上传完成的文件】
+        if(progressBar < 100){
+            buttonControl("stop",fileId, false);
+            buttonControl("upload",fileId, true);
+            buttonControl("cancel",fileId, true);
+        }
+
+        // 设置上传速度
+        $("#speed"+fileId).html("0KB/S");
+
+        form.render(null,'uploadFormFilter');
+
+    }
+
+    // 取消上传
+    function cancel(fileId) {
+
+        // 未上传完成的才执行
+        var progressBar = parseInt($("#progressBarDiv"+fileId).find("span").html().replaceAll("%",""));
+        if(progressBar >= 99)
+            return;
+
+//        // 删除后台已上传的分片和文件【还是保留后台已上传的分片，如果重新选择该文件则可以续传】
+//        var resultData = ajaxUtilJson({fileMD5:val,chunkSize:chunkSize,fileExt:file.ext},"/maxFileUpload/cancel");
+//
+//        if(!resultData.success)
+//        {
+//            alert("文件取消失败!");
+//            return;
+//        }
+
+        // 从当前上传队列中删除指定文件
+        uploader.removeFile(fileId,true);
+
+        // 删除文件上传列表展示内容
+        $("#"+fileId).remove();
+
+        // 将文件名称从数组中删除
+        fileNameArray.splice(fileNameArray.indexOf($("#fileName"+fileId).html()),1);
+
+        // 将文件MD5从数组中删除
+        fileMD5Array.splice(fileMD5Array.indexOf($("#fileMD5"+fileId).html()),1);
+
+        // 将文件分片索引从数组中删除
+        fileUploadChunkIndexArray.splice(fileUploadChunkIndexArray.indexOf(fileId),1);
+
+    }
+
+    // 计算文件上传速度
+    // 【点击上传时记录上传时间点，分片上传的时候获取当前时间节点，在根据chunkSize计算上传速度。上传速度跟进度条同步更新。该算法可以优化】
+    function uploadSpeed(fileId) {
+
+        // 获取上次上传的时间节点
+        var oldTime = uploadTimeMap.get(fileId);
+
+        // 获取当前时间节点
+        var myDate = new Date();
+        var newTime = myDate.getTime();
+
+        // 重置上传时间点
+        uploadTimeMap.set(fileId,newTime);//设置当前分片开始上传的时间节点
+
+        // 计算上传速度
+        var uploadSpeed = WebUploader.formatSize( (chunkSize * 1024 * 1024 / (newTime-oldTime) / 1000).toFixed(2), 0, ['B', 'KB', 'MB', 'GB'] );
+
+        // 设置上传速度
+        $("#speed"+fileId).html(uploadSpeed+"/S");
+
+    }
+
+    // 控制按钮禁用启用
+    function buttonControl(bId,fId,status){
+
+        // 启用
+        if(status)
+        {
+            $("#"+bId+fId).attr("disabled",false);
+            $("#"+bId+fId).attr("class","layui-btn layui-btn-xs layui-btn-normal");
+        }
+
+        // 禁用
+        else
+        {
+            $("#"+bId+fId).attr("disabled",true);
+            $("#"+bId+fId).attr("class","layui-btn layui-btn-xs layui-btn-normal layui-btn-disabled");
+        }
+
+    }
+
+
+</script>
+
+</html>

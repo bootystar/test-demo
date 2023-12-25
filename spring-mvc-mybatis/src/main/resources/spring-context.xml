@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       			   http://www.springframework.org/schema/beans/spring-beans.xsd
+       			   http://www.springframework.org/schema/context 
+       			   http://www.springframework.org/schema/context/spring-context.xsd
+       			   http://www.springframework.org/schema/aop 
+       			   http://www.springframework.org/schema/aop/spring-aop.xsd
+       			   http://www.springframework.org/schema/tx 
+       			   http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!-- 一、spring与mybatis基础整合 -->
+
+    <!-- 1.导入数据库配置文件 -->
+    <context:property-placeholder location="classpath:db.properties"/>
+
+    <!-- 2.配置数据源  ctrl+shit+t 查找类-->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="${jdbc.driver}"></property>
+        <property name="url" value="${jdbc.url}"></property>
+        <property name="username" value="${jdbc.username}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+    </bean>
+
+    <!-- 3.创建工厂 -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 设置数据源 -->
+        <property name="dataSource" ref="dataSource"></property>
+        <!-- 加载mybatis配置文件：项目中就不用单独加载mybatis的配置文件了 -->
+        <property name="configLocation" value="classpath:mybatis-config.xml"></property>
+
+        <!-- 取别名 -->
+        <property name="typeAliasesPackage" value="com.java.entity"></property>
+
+        <!-- 分页插件 -->
+        <property name="plugins" ref="pageInterceptor"></property>
+
+    </bean>
+
+    <!-- 分页插件 -->
+    <bean id="pageInterceptor" class="com.github.pagehelper.PageInterceptor"></bean>
+
+    <!-- 4.扫描mapper:创建各种mapper -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!-- 指定扫哪个包 -->
+        <property name="basePackage" value="com.dao"></property>
+        <!-- 关联工厂 -->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+    </bean>
+
+
+    <!--扫描service-->
+    <context:component-scan base-package="com.service"></context:component-scan>
+
+
+    <!-- 二、配置事务管理 -->
+    <!-- 1.配置切面 -->
+    <aop:config>
+        <!-- 1.1.切点 -->
+        <aop:pointcut expression="execution(* com.service.*.*(..))" id="pc"/>
+        <!-- 1.2.配置事务通知 -->
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="pc"/>
+    </aop:config>
+
+    <!-- 2.配置事务通知 -->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <!-- 通过方法名给指定的方法设置指定的事务处理方式
+                spring为事务管理提供不同管理方式，程序员就可以通过tx:method进行偏好设置，每个方法事务的处理方式可以不同
+                此处tx:method name="*"表示通过切入点表达式找到的所有方法都按照默认方式进行事务处理
+
+                propagation:事务传播特性,在同一个业务中如果存在多个事务，事务之间该怎么进行处理（是单独执行还是合成一个）
+                    REQUIRED：如果当前新开启的事务已经在一个事务中了，就直接加入该事务中（前），合并两个事务成为一个
+                    REQUIRES_NEW：不管是否在事务中都新建一个事务，独立执行
+                 SUPPORTS
+                 MANDATORY
+                 NOT_SUPPORTED
+                 NEVER：永远都不要在事务时执行，如果在事务中就报错
+                 NESTED
+
+             isolation：事务隔离级别，当多个线程同时访问数据库的数据时，可能存在线程安全问题，就通过设计事务隔离级别
+                           避免数据出现问题
+                  事务隔离级别的具体含义是指通过什么样的锁机制确保数据的安全
+                 DEFAULT			默认，采用数据库默认的事务隔离级别
+                 READ_UNCOMMITTED	读未提交
+                 READ_COMMITTED		读已提交
+                 REPEATABLE_READ	不可重复读
+                 SERIALIZABLE		序列化
+            -->
+            <tx:method name="update*" propagation="REQUIRED" isolation="DEFAULT"
+                       no-rollback-for="java.lang.ArithmeticException"/>
+            <tx:method name="add*" propagation="REQUIRED"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <!-- 3.配置事务管理器:负责管理事务 -->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!-- 指定管理哪个数据 -->
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+</beans>
+
+
+

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>变量声明</title>
+
+    <script>
+        // 普通声明方式   变量作用域会自动提升
+        var a=10 ;
+        //  变量可以重复声明,不会报错
+        var a =20 ;
+
+        //ES6中变量的声明方式
+        //     作用域不会提升,且同一作用域不能重复声明
+        let b =20;
+
+        //使用const声明常量(声明后不能再次赋值)
+        const c=20;
+
+        //方法的声明-------------------------
+
+        //传统函数
+        function fun(){
+            console.info("hello");
+        }
+        //传统调用
+        fun();
+
+
+        //ES5 声明方式
+        let fun2=function(){
+            console.log("hello");
+        }
+        //ES5调用(将一个方法当作变量使用)
+        fun2();
+
+        //ES6中,可以使用箭头>作为函数
+        let fun3=(n,m)=>{
+            console.log("hello");
+            return n+m;
+        }
+        //调用,获取返回值
+        let result=fun3(2,3);
+        console.log(result);
+
+        //创建对象,属性中也可以声明为方法
+        let dog={
+            name:"dog1",
+            gender:"1",
+            bark:()=>{
+                console.log("叫")
+            },
+            //简便写法
+            eat(){
+                console.log("吃")
+            }
+        }
+        //调用属性或方法
+        dog.bark();
+        dog.eat();
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </script>
+</head>
+<body>
+
+
+
+</body>
+</html>

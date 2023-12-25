@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="Vue.js"></script>
+
+</head>
+<body>
+
+<div id="app">
+    <abc></abc>
+    <abc></abc>
+</div>
+<!--
+    重点:组件在默认情况下都是获取本属性中的属性值,
+    在子组件中定义数据,必须放在data()方法中
+    而且必须要返回一个对象{key:value,key:value}
+    -->
+<template id="temp1">
+    <div>
+        <img :src="url">
+        <p>{{name}}</p>
+        <input type="text" v-model="name">
+    </div>
+</template>
+
+<script>
+    Vue.component("abc", {
+        template: "#temp1",
+        //在子组件中data必须时函数,不能时属性,而且必须return一个对象
+        //返回的永远时一个新的对象
+        data() {
+            return {
+                url: "anni.jpg",
+                name: "子组件中的name"
+            }
+        }
+    });
+    new Vue({
+        el: "#app",
+        data: {
+            url: "anni.jpg",
+            name: "原始模板中的name"
+        }
+    })
+</script>
+</body>
+</html>

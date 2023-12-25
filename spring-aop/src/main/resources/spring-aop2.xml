@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       			   http://www.springframework.org/schema/beans/spring-beans.xsd
+       			   http://www.springframework.org/schema/context 
+       			   http://www.springframework.org/schema/context/spring-context.xsd
+       			   http://www.springframework.org/schema/aop 
+       			   http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!--aspectj方案(较多使用) -->
+    <!--配置通知类(需增强的功能,重复的功能) -->
+    <bean id="advice" class="com.aspectj.Advice"></bean>
+
+    <!--配置切点 -->
+    <aop:config>
+
+        <!--指定切点的作用的路径和方法 -->
+        <aop:pointcut
+                expression="execution(* com.service.*.*(..))" id="cp"/>
+
+        <!--配置通知的事件和对银行的方法 -->
+        <!--使用ref属性指定通知方法所存在的类 -->
+        <aop:aspect ref="advice">
+            <!--使用对应的属性指定调用的方法 -->
+            <!--aop:见名知意,对应指定的执行时机 -->
+            <!--属性method:指定对应的方法 -->
+            <!--属性 point-cut-ref:指定作用的切点 -->
+            <aop:before method="before" pointcut-ref="cp"/>
+            <aop:after method="after" pointcut-ref="cp"/>
+            <aop:around method="around" pointcut-ref="cp"/>
+            <aop:after-returning method="afterReturning" pointcut-ref="cp"/>
+            <aop:after-throwing method="except" pointcut-ref="cp"/>
+        </aop:aspect>
+    </aop:config>
+
+    <!--配置实体bean类,若该类满足切点条件 ,在调用该类的指定方法时将会自动触发切点-->
+    <bean id="bankService" class="com.service.BankServiceImpl"></bean>
+
+</beans>      			   

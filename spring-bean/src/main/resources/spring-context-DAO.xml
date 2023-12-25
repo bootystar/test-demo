@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       			   http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- 创建mapper -->
+    <bean id="userMapper" class="com.java.mapper.impl.UserMapperImpl"></bean>
+
+    <!-- 创建service -->
+    <bean id="userService" class="com.java.service.impl.UserServiceImpl">
+        <property name="userMapper" ref="userMapper"></property>
+    </bean>
+
+    <!-- 创建servlet -->
+    <!--在property属性内使用ref指定该属性所对应的bean的id,spring在加载时会自动将对应的对象进行赋值-->
+    <bean id="userServlet" class="com.java.servlet.UserServlet">
+        <property name="userService" ref="userService"></property>
+    </bean>
+
+</beans>

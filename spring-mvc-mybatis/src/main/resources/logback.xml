@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--用于自动生成日志的配置文件,该文件强制命名, 不可更改名称和路径-->
+
+
+<!--配置-->
+<configuration>
+    <!-- 将日志输出到指定位置ConsoleAppender 控制台-->
+    <appender name="STDOUT"
+              class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%logger{35} - %msg %n</pattern>
+        </encoder>
+    </appender>
+
+
+
+    <!-- 全局设置记录日志的级别 -->
+    <!--日志等级:
+    debug   调试     最低级别,所有信息都输出显示
+    info    信息     一般是在生产环节使用info,主要用于显示程序中出现的所有问题,,警告,错误信息
+    warn    警告      显示警告及以上的信息
+    error   错误信息    只会显示错误信息
+    -->
+    <root level="info">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+
+    <!-- 指定日志输出级别 additivity=false 避免日志重复打印-->
+    <logger name="com.dao" level="debug" additivity="false">
+        <appender-ref ref="STDOUT" />
+    </logger>
+
+
+    <!-- 过滤无用的日志 -->
+    <logger name="org.apache.ibatis.io" level="info">
+        <appender-ref ref="STDOUT" />
+    </logger>
+
+
+</configuration>

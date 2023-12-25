@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="Vue.js"></script>
+
+</head>
+<body>
+
+<div id="app">
+<!--逻辑
+使用v-for循环获取存放在app对象中的数组的单个对象
+将v-for数组的单个对象给子对象(template标签)中的指定对象进行绑定
+每个abc标签的内容等于template标签内容 -->
+    <abc v-for="single in goodsList" v-bind:child="single"></abc>
+
+</div>
+
+<template id="temp1">
+<!--此处的c是该标签对象内的一个属性(在下方Vue组件注册时绑定的)-->
+    <div>
+        <img :src="c.url">
+        <p>{{c.name}}</p>
+    </div>
+</template>
+
+<script>
+    //此对象是单个abc标签,每个abc都是使用template的模板
+    Vue.component("abc", {
+        template: "#temp1",
+        //传数据尽量使用父组件,减少请求的发送数量此处不使用data(),使用props替代
+        props: {
+            c:{
+                //设置默认值
+                default:{url: "anni.jpg", name: "default"}
+            }
+        }
+    });
+    //此对象是id为app的div
+    new Vue({
+        el: "#app",
+        data: {
+            goodsList:
+                [
+                    {url: "anni.jpg", name: "name1"},
+                    {url: "anni.jpg", name: "name2"},
+                    {url: "anni.jpg", name: "name1"}
+                ]
+        }
+    })
+</script>
+</body>
+</html>

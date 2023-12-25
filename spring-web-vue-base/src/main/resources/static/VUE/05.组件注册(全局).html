@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="Vue.js"></script>
+
+</head>
+<body>
+<!--注册组件:将一个固定的模板注册称为标签使用-->
+<div id="app">
+
+    <!--    3.使用组件名字作为标签,该标签即为整个组件的内容-->
+    <abc></abc>
+</div>
+
+<!--        1.定义组件
+    如果在组件中存在多个标签,那么这些标签应该在同一个根标签中
+    -->
+<template id="temp1">
+    <div>
+        <img src="anni.jpg">
+        <p>功能菜单名字</p>
+    </div>
+</template>
+
+<hr>
+
+<div id="app1">
+    <abc></abc>
+</div>
+
+<script>
+    //  2.注册组件,全局注册       参数1,组件的名字,参数2.将哪个template注册成组件
+    Vue.component("abc", {
+        template: "#temp1"
+    });
+
+    new Vue({
+        el: "#app",
+        data: {},
+        methods: {},
+    })
+    new Vue({
+        el: "#app1"
+    })
+
+
+</script>
+</body>
+</html>

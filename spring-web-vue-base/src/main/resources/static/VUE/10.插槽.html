@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="Vue.js"></script>
+
+</head>
+<body>
+
+<div id="app">
+    <!--    指定替换子组件中插槽的内容(包括标签)-->
+    <temp>
+        <h4>父组件自己要显示的的数据的标签</h4>
+
+        <!--替换具名插槽(需要指定属性)-->
+        <h4 slot="abc">父组件自己要显示的具名插槽</h4>
+
+        <!--        作用域插槽-->
+        <template slot-scope="slot">
+            <p v-for="book in slot.data">{{book.name}}</p>
+        </template>
+
+    </temp>
+
+
+</div>
+
+<template id="temp">
+
+    <div>
+        <h3>子组件</h3>
+
+        <!--        匿名插槽,指定后用父组件中的内容替换子组件中的内容-->
+        <slot>
+            <p>插槽内:父组件要显示的内容</p>
+        </slot>
+
+        <!--        具名插槽-->
+        <slot name="abc">
+            <p>具名插槽内容</p>
+        </slot>
+
+        <!--        作用域插槽 data属性是自定义(名字随意)的,意思是将books的值绑定到data属性上-->
+        <slot :data="books">
+            <ul>
+                <li v-for="book in books">{{book.name}}</li>
+            </ul>
+
+        </slot>
+    </div>
+</template>
+
+<script>
+    Vue.component("temp", {
+        template: "#temp",
+        data() {
+            return {
+                books:
+                    [
+                        {name: "book1"},
+                        {name: "book2"},
+                        {name: "book3"},
+                        {name: "book4"},
+                        {name: "book5"}
+                    ]
+            }
+
+
+        }
+    });
+
+    new Vue({
+        el: "#app",
+        data: {},
+
+    })
+
+
+</script>
+</body>
+</html>

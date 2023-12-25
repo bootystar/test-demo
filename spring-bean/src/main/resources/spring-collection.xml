@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       			   http://www.springframework.org/schema/beans/spring-beans.xsd"
+	default-autowire="byType">
+
+
+	<bean id="user" class="com.java.bean.User">
+		<property name="name" value="小明"></property>
+		<property name="id" value="1"></property>
+	</bean>
+
+
+
+
+<!--	 集合的注入都是给<property>添加子标签 -->
+<!--	 数组：<array> -->
+<!--	 List：<list> -->
+<!--	 Set：<set> -->
+<!--	 Map：<map> ，map存放k/v 键值对，使用<entry>描述 -->
+<!--	 properties：<props> <prop key=""></prop> -->
+<!--	 普通数据：<value> -->
+<!--	 引用数据：<ref> -->
+
+	<bean id="student" class="com.java.bean.Student">
+
+		<!--map集合 -->
+		<property name="map">
+			<map>
+				<!--基本数据类型(包含string)写法 -->
+				<entry>
+					<key>
+						<value>123</value>
+					</key>
+					<value>"小小"</value>
+				</entry>
+				
+				<entry key="1234" value="大大"></entry>
+
+
+				<!--引用数据类型写法 -->
+				<entry key="1" value-ref="user"></entry>
+			</map>
+		</property>
+
+
+		<!--list集合 -->
+		<property name="list">
+			<list>
+				<!--基本数据类型(包含string)写法 -->
+				<value>123</value>
+
+				<!--引用数据类型写法 -->
+				<ref bean="user" />
+			</list>
+		</property>
+
+
+		<!--set集合 -->
+		<property name="set">
+			<set>
+				<!--基本数据类型(包含string)写法 -->
+				<value>123</value>
+				
+				<!--引用数据类型写法 -->
+				<ref bean="user" />
+			</set>
+		</property>
+
+		
+
+
+		<!--数组 -->
+		<property name="array">
+			<array>
+				<!--基本数据类型(包含string)写法 -->
+				<value>123</value>
+
+				<!--引用数据类型写法 -->
+				<ref bean="user" />
+			</array>
+
+		</property>
+
+
+	</bean>
+
+
+</beans>

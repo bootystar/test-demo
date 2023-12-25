@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Insert title here</title>
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function(){
+            var url = "ws://localhost:8080/WebSocketHandler/";
+            var ws = null;
+            //连接服务器
+            $("#join").click(function(){
+                var userName = $("#userName").val();
+                url = url + userName;	//传递用户名
+                console.info(url);
+                //创建对象，连接服务器
+                ws = new WebSocket(url); 	//html5中提供了
+
+                //给open事件绑定方法
+                ws.onopen = function(){
+                    console.info("连接成功");
+                }
+                //接收到数据
+                ws.onmessage = function(result){
+                    var textarea = document.getElementById('textarea');
+                    textarea.append(result.data+"\n");
+                    //将文本域的滚动条滚动到最后
+                    textarea.scrollTop = textarea.scrollHeight;
+                }
+                //关闭连接
+                ws.onclose = function(){
+                    $("#message").append("用户:"+userName+"离开聊天室"+"\n");
+                    console.info("关闭连接");
+                }
+            });
+            //发送消息
+            $("#send").click(function(){
+                //将输入框中的消息发送给服务器，并且显示到消息框中
+                var messageInput = $("#message");
+                var message = messageInput.val();
+                if(ws!=null){
+                    ws.send(message);	//发送消息
+                    messageInput.val("");
+                }
+            });
+            //断开连接
+            $("#out").click(function(){
+                if(ws!=null){
+                    ws.close();
+                }
+            });
+
+        })
+    </script>
+</head>
+<body>
+<div id="box">
+    <p>聊天室</p>
+    <textarea rows="10" cols="50" disabled="disabled" id="textarea"></textarea><br>
+    <div class="infoBox">
+        用户名:<input type="text" id="userName"><br><br>
+        <button style="color: green;" id="join">加入聊天室</button>
+        &nbsp;&nbsp;&nbsp;&nbsp;
+        <button style="color: red;" id="out">离开聊天室</button>
+    </div>
+    <br><br>
+    <div class="infoBox">
+        消&nbsp;&nbsp;&nbsp;息:<input type="text" id="message"><br><br>
+        <button id="send">发送消息</button>
+    </div>
+    <br>
+
+</div>
+</body>
+</html>

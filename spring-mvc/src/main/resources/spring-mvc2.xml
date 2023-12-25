@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       			   http://www.springframework.org/schema/beans/spring-beans.xsd
+       			   http://www.springframework.org/schema/context 
+       			   http://www.springframework.org/schema/context/spring-context.xsd
+       			   http://www.springframework.org/schema/aop 
+       			   http://www.springframework.org/schema/aop/spring-aop.xsd
+       			   http://www.springframework.org/schema/tx
+       			   http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+	<!--第二种方式(配置时使用的类和第一种方式不同) -->
+
+	<!--handlerMapper 处理映射器,根据url找到对应的handler(servlet)处理请求 -->
+	<bean
+		class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+		<property name="mappings">
+			<props>
+			<!--通过url,寻找对应指定id调用相应的handler处理类-->
+				<prop key="/goods">goods</prop>
+			</props>
+		</property>
+	</bean>
+
+	<!--handleradapter 处理器适配器,用来调用handler的方法(处理请求) -->
+	<bean
+		class="org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter"></bean>
+
+	<!--视图解析器,将逻辑视图转换成物理视图 -->
+	<bean
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver"></bean>
+
+	<!-- 配置handler对应的url -->
+	<bean id="goods" class="com.java.demo.controller.GoodsController"></bean>
+
+</beans>      			   

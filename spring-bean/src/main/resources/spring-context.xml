@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       			   http://www.springframework.org/schema/beans/spring-beans.xsd"
+       default-autowire="byName">
+    <!--
+    auto-wire属性:
+        指定bean类内部属性是否自动寻找对应id的bean进行赋值
+		byType	根据bean的class属性赋值(同类不能重复创建多个不同id对象)
+		byName	根据bean的id	属性赋值
+	-->
+
+    <!--
+    bean配置java对象,默认情况下一个bean对应一个java对象
+        当spring加载配置文件时,只要遇到bean标签,就会创建bean里面指定类型的对象(反射)
+
+        id			bean的唯一标识,不可重复
+        class		bean的类型,要求输入类的全路径
+        lazy-init:	为true时表示使用时再创建,加载时不创建
+
+        scope:		范围
+                singleton	单例:只会创建一个放到容器中(默认加载时创建)
+                prototype	原型:获取一次就创建一个,如果使用了该值(默认加载时不会创建该对象)
+                request		web情况下,每请求一次创建一次对象
+                session		web情况下,每次会话创建一个
+
+    -->
+    <bean id="user" class="com.java.bean.User"></bean>
+
+    <!--有参构造-->
+    <bean id="user2" class="com.java.bean.User">
+        <constructor-arg name="id" value="1001"></constructor-arg>
+        <constructor-arg name="name" value="zhangsan"></constructor-arg>
+    </bean>
+
+    <!--使用getter和setter给属性ignorance赋值-->
+    <bean id="user3" class="com.java.bean.User">
+        <property name="id" value="1002"></property>
+        <property name="name" value="lisi"></property>
+    </bean>
+
+    <!--通过工厂方法创建对象-->
+    <bean id="user4" factory-method="getInstance" class="com.java.bean.User">
+        <constructor-arg name="id" value="1003"></constructor-arg>
+        <constructor-arg name="name" value="wangwu"></constructor-arg>
+    </bean>
+
+</beans>

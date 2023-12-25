@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="Vue.js"></script>
+</head>
+<body>
+
+<p>使用v-for循环遍历数组</p>
+<div id="app">
+    <!--    book代指变量名(类似foreach循环中的临时变量),books对应Vue对象中的属性-->
+    <!--    <div v-for="book in books">-->
+    <!--    book为临时对象,index代表下标(变量名随意指定)-->
+    <div v-for="(book,index) in books">
+        <p>{{index}}</p>
+        <h3>{{book.name}}</h3>
+        <p>{{book.price}}</p>
+    </div>
+</div>
+
+
+
+
+<script>
+    new Vue({
+        el: "#app",
+        data: {
+            books: [
+                {name: "book1", price: 888},
+                {name: "book2", price: 999},
+                {name: "book3", price: 777},
+            ]
+        }
+    })
+</script>
+
+<hr>
+<p>使用v-for遍历属性</p>
+
+
+<div id="app2">
+    <ul>
+<!--        使用key value获取对象中的属性(遍历多个属性)-->
+<!--        属性依次为:属性值,属性名,下标,只与顺序有关,与指定名称无关-->
+        <li v-for="(value,key, index) in books">
+            {{value}} ---{{key}}---{{index}}
+        </li>
+
+    </ul>
+</div>
+
+<script>
+    new Vue({
+        el: "#app2",
+        data: {
+            books: {name: "this is a book", price: 888,author:"nobody"},
+
+
+        }
+    })
+</script>
+
+</body>
+</html>

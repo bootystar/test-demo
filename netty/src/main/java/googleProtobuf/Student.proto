@@ -1,0 +1,6 @@
+syntax = "proto3";//版本
+option java_outer_classname="StudentPOJO";//外部文件
+message Student{//真正的内部类对象，此处的属性后方的数字是序号，不是值
+  int32 id=1;
+  string name=2;
+}

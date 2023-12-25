@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>购物车练习</title>
+    <script src="Vue.js"></script>
+</head>
+
+<body>
+
+<div id="app">
+    <table>
+        <th>商品名</th>
+        <th>价格</th>
+        <th>数量</th>
+        <th>小计</th>
+        <th>操作</th>
+        <tr v-for="book in books">
+            <td>{{book.name}}</td>
+            <td>{{book.price}}</td>
+            <td>
+                <button @click="less(book)">-</button>
+                <span>{{book.num}}</span>
+                <button @click="add(book)">+</button>
+            </td>
+            <td>{{book.price * book.num}}</td>
+            <td>
+                <button @click="del(book)">删除</button>
+            </td>
+        </tr>
+
+    </table>
+    <p>{{total()}}</p>
+</div>
+
+<script>
+    new Vue({
+        el: "#app",
+        data: {
+            books: [
+                {id: 1, name: "book1", price: 888, num: 3},
+                {id: 2, name: "book2", price: 999, num: 4},
+                {id: 3, name: "book3", price: 777, num: 5},
+            ]
+        },
+        methods: {
+            add(book) {
+                book.num++;
+            },
+            less(book) {
+                book.num--;
+            },
+            del(book) {
+                //使用当前对象的属性需要添加this指定
+                for (let i = 0; i < this.books.length; i++) {
+                    let book2 = this.books[i];
+                    if (book2.id = book.id) {
+                        this.books.splice(i, 1);
+                        break;
+                    }
+                }
+            },
+            total() {
+                let totalPrice = 0;
+                for (let i = 0; i < this.books.length; i++) {
+                    let book = this.books[i];
+                    totalPrice += book.price * book.num;
+                }
+                return totalPrice;
+            },
+        },
+
+    })
+</script>
+
+
+</body>
+
+</html>
