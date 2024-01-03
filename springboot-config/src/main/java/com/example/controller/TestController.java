@@ -120,7 +120,6 @@ public class TestController {
      * @param person 人
      * @return {@code Person }
      * @author booty
-     * @since 2024/01/02
      */
     @GetMapping("/test4")
     public Person test4(@RequestBody Person person) {
