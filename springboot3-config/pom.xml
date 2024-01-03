@@ -5,17 +5,19 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.10</version>
+        <version>3.2.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>springboot-config</artifactId>
+    <artifactId>springboot3-config</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>springboot-config</name>
-    <description>springboot-config</description>
+    <name>springboot3-config</name>
+    <description>springboot3-config</description>
+    <properties>
+        <java.version>21</java.version>
+    </properties>
 
     <dependencies>
-
         <!--jacksonYaml转化, 支持yml返回值-->
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
@@ -55,14 +57,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -1,8 +1,17 @@
+
+# 使用---表示一个新的配置块 , 可以折叠, 类似c#中的region
+---
+spring:
+  threads:
+    virtual:
+      # 启用虚拟线程(JDK21)
+      enabled: true
+---
+# web容器相关配置
 server:
   port: 80
-# 使用---表示一个新的配置块 , 可以折叠, 类似c#中的region
-# 配置文件属性注入
 ---
+# 自定义属性注入配置
 person:
   name: 张三
   age: 18
@@ -12,7 +21,7 @@ person:
     name: 李四
     age: 20
     #birthDay 推荐写为birth-day
-    birthDay: 2018/10/10
+    birth-day: 2018/10/10
     text: ["abc","def"]
   dogs:
     - name: 小黑
@@ -36,9 +45,6 @@ person:
         使用>的文本,第一行
         第二行
         第三行
----
-
-#日志配置
 ---
 #日志配置
 logging:
@@ -71,9 +77,7 @@ logging:
 #如果使用标准配置文件，spring 无法完全控制日志初始化。
 #最佳实战：自己要写配置，配置文件名加上 xx-spring.xml
 ---
-
 # 静态资源规则配置
----
 spring:
   # spring.web下只有静态资源(resources)和国际化(locale)相关配置
   web:
@@ -96,13 +100,8 @@ spring:
           max-age: 7200
           # 共享缓存
           cache-public: true
-
-
-
 ---
-
 # mvc配置
----
 spring:
   mvc:
 #    # 配置webjar访问映射路径(前后端结合, 将js等静态文件以jar包形式保存管理依赖版本, 需要添加额外依赖, 官网: https://www.webjars.org/)
@@ -119,4 +118,3 @@ spring:
       media-types:
         # 添加自定义yaml格式支持
         yaml: application/yaml
----

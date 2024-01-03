@@ -26,7 +26,7 @@ public class Test1 {
     @Test
     public void test2(){
         for (int i = 0; i < 1000; i++) {
-            log.info("this is info");
+            log.info("this is a log info loopCount:{}",i);
         }
     }
 }

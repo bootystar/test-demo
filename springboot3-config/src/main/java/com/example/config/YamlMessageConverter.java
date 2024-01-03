@@ -26,7 +26,7 @@ public class YamlMessageConverter extends AbstractHttpMessageConverter<Object> {
     public YamlMessageConverter(){
 
         // 指定媒体类型并指定字符集(可不指定), 若不指定媒体类型, springboot不知道那种类型参数使用此转换器
-        super(new MediaType("text", "yaml", StandardCharsets.UTF_8));
+        super(new MediaType("application", "yaml", StandardCharsets.UTF_8));
 
         // 创建yml工厂, 并指定不生成切割文档的分隔符号(---)
         YAMLFactory factory = new YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
