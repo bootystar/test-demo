@@ -4,7 +4,6 @@ import lombok.Data;
 
 /**
  * @author booty
- * @since 2023/12/26
  */
 @Data
 public class Cat {
