@@ -14,4 +14,22 @@
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
+    <modules>
+        <module>elasticsearch</module>
+        <module>java-base</module>
+        <module>java-proxy</module>
+        <module>java-webservice</module>
+        <module>netty</module>
+        <module>spring-aop</module>
+        <module>spring-bean</module>
+        <module>spring-mvc</module>
+        <module>spring-mvc-mybatis</module>
+        <module>spring-mybatis</module>
+        <module>spring-mybatis-annotation</module>
+        <module>spring-web-vue-base</module>
+        <module>springboot-file-uploader</module>
+        <module>springboot-quartz</module>
+        <module>springboot-websocket</module>
+    </modules>
+
 </project>
