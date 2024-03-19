@@ -41,6 +41,25 @@ public class StreamTest {
      *      接收T类型参数，返回布尔值
      */
 
+
+//================================================中间操作及终止操作================================================
+    /*
+    常见中间操作:
+    filter、map、mapToInt、mapToLong、mapToDouble
+    flatMap、flatMapToInt、flatMapToLong、flatMapToDouble
+    mapMulti、mapMultiToInt、mapMultiToLong、mapMultiToDouble、
+    parallel、unordered、onClose、sequential
+    distinct、sorted、peek、limit、skip、takeWhile、dropWhile、
+     */
+
+    /*
+    常见终止操作:
+    forEach、forEachOrdered、toArray、reduce、collect、toList、min、
+    max、count、anyMatch、allMatch、noneMatch、findFirst、findAny、iterator
+     */
+
+
+
 //================================================创建stream================================================
 
     /**
